@@ -11,6 +11,7 @@ import com.security.springsecurityjwtoauth2.jwtAuth.JwtAccessTokenFilter;
 import com.security.springsecurityjwtoauth2.jwtAuth.JwtRefreshTokenFilter;
 import com.security.springsecurityjwtoauth2.jwtAuth.JwtTokenUtils;
 import com.security.springsecurityjwtoauth2.repo.RefreshTokenRepo;
+import com.security.springsecurityjwtoauth2.service.LogoutHandlerService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -53,6 +55,7 @@ public class SecurityConfig {
     private final RSAKeyRecord rsaKeyRecord;
     private final JwtTokenUtils jwtTokenUtils;
     private final RefreshTokenRepo refreshTokenRepo;
+    private final LogoutHandlerService logoutHandlerService;
 
     @Order(1)
     @Bean
@@ -105,17 +108,17 @@ public class SecurityConfig {
      * Configures the security filter chain specifically for refresh token requests.
      * This method sets up security configurations to handle requests to the "/refresh-token/**" endpoint,
      * ensuring that only authenticated requests are processed for token refresh operations.
-     *
+     * <p>
      * The security configuration includes:
      * - Matching requests to "/refresh-token/**" for this filter chain.
      * - Disabling CSRF protection as it's not needed for stateless JWT authentication.
      * - Requiring all requests to this endpoint to be authenticated, ensuring that only valid, authenticated
-     *   requests can attempt to refresh a token.
+     * requests can attempt to refresh a token.
      * - Configuring OAuth2 resource server with JWT to validate the refresh token.
      * - Setting the session management strategy to stateless to prevent Spring Security from creating
-     *   HttpSession instances, aligning with the stateless nature of JWT.
+     * HttpSession instances, aligning with the stateless nature of JWT.
      * - Handling exceptions with custom entry points for authentication and access denied scenarios,
-     *   providing meaningful error responses to the client.
+     * providing meaningful error responses to the client.
      *
      * @param httpSecurity the {@link HttpSecurity} to configure
      * @return the configured {@link SecurityFilterChain} for refresh token requests
@@ -123,14 +126,14 @@ public class SecurityConfig {
      */
     @Order(3)
     @Bean
-    public SecurityFilterChain refreshTokenSecurityFilterChain(HttpSecurity httpSecurity) throws Exception{
+    public SecurityFilterChain refreshTokenSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .securityMatcher(new AntPathRequestMatcher("/refresh-token/**"))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
                 // to validate the jwt token and set the authentication object in the SecurityContext if the token is valid
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
-                .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // to add the filter before UsernamePasswordAuthenticationFilter to validate the jwt token
                 /*
                 This operation is performed by the .addFilterBefore() method, which takes two arguments.
@@ -142,9 +145,9 @@ public class SecurityConfig {
                 The second argument, UsernamePasswordAuthenticationFilter.class, specifies that the JwtRefreshTokenFilter should be added before the UsernamePasswordAuthenticationFilter in the security filter chain.
                 This ordering is significant because it ensures that the refresh token is processed and, if valid, a new access token is issued before any authentication logic that relies on username and password credentials is executed.
                  */
-                .addFilterBefore(new JwtRefreshTokenFilter(rsaKeyRecord,jwtTokenUtils,refreshTokenRepo), UsernamePasswordAuthenticationFilter.class)
-                .exceptionHandling(ex->{
-                    log.info("[SecuirtyConfig: refreshTokenSecuityFilterChain] Exception due to: {}]",ex);
+                .addFilterBefore(new JwtRefreshTokenFilter(rsaKeyRecord, jwtTokenUtils, refreshTokenRepo), UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> {
+                    log.info("[SecuirtyConfig: refreshTokenSecuityFilterChain] Exception due to: {}]", ex);
                     ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
                     ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
                 })
@@ -152,8 +155,56 @@ public class SecurityConfig {
                 .build();
     }
 
-    // to secure the h2 console
+    /**
+     * Configures the security filter chain for logout functionality.
+     * This method sets up the security configurations specifically for handling logout requests,
+     * ensuring that users can securely log out of the application.
+     * <p>
+     * The security configuration includes:
+     * - Matching requests to "/logout/**" to apply this security filter chain.
+     * - Disabling CSRF protection as it's not typically needed for logout functionality and can simplify client-side logic.
+     * - Requiring all requests to be authenticated to access the logout endpoint, ensuring that only logged-in users can initiate a logout.
+     * - Configuring the OAuth2 resource server with JWT to handle token-based authentication.
+     * - Setting the session management strategy to stateless, which is suitable for JWT-based authentication, as it doesn't rely on server-side session storage.
+     * - Adding a custom JwtAccessTokenFilter before the UsernamePasswordAuthenticationFilter to process JWT tokens for authentication.
+     * - Configuring logout behavior to clear the security context upon successful logout, ensuring that the user is fully logged out and their session is invalidated.
+     * - Handling exceptions with custom entry points for authentication errors and access denied scenarios, providing appropriate error responses.
+     *
+     * @param httpSecurity the {@link HttpSecurity} to configure
+     * @return the configured {@link SecurityFilterChain} for logout requests
+     * @throws Exception if an error occurs during the configuration
+     */
     @Order(4)
+    @Bean
+    public SecurityFilterChain logoutSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                .securityMatcher(new AntPathRequestMatcher("/logout/**"))
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // to add the filter before UsernamePasswordAuthenticationFilter to validate the jwt token
+                .addFilterBefore(new JwtAccessTokenFilter(rsaKeyRecord, jwtTokenUtils), UsernamePasswordAuthenticationFilter.class)
+                // to handle the logout functionality
+                .logout(logout -> logout
+                        // to set the logout url
+                        .logoutUrl("/logout")
+                        // to add the logout handler
+                        .addLogoutHandler(logoutHandlerService)
+                        // to clear the security context upon successful logout
+                        .logoutSuccessHandler((request, response, authentication) ->
+                                SecurityContextHolder.clearContext())
+                )
+                .exceptionHandling(ex -> {
+                    log.error("[SecurityConfig:logoutSecurityFilterChain] Exception due to: {} ", ex);
+                    ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
+                    ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
+                })
+                .build();
+    }
+
+    // to secure the h2 console
+    @Order(5)
     @Bean
     public SecurityFilterChain h2ConsoleSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity

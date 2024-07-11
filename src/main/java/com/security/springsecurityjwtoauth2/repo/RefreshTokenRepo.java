@@ -15,4 +15,12 @@ import java.util.Optional;
 @Repository
 public interface RefreshTokenRepo extends JpaRepository<RefreshTokenEntity,Long> {
     Optional<RefreshTokenEntity> findByRefreshToken(String refreshToken);
+
+//    //using username to query all place can be revoked token
+//    @Query(value = "select rt.* from REFRESH_TOKEN rt " +
+//            "inner join USER_DETAILS ud " +
+//            "on rt.user_id = ud.id " +
+//            "where ud.email = :userEmail " +
+//            "and rt.revoked = false",nativeQuery = true)
+//    List<RefreshTokenEntity> findAllRefreshTokenByUserEmailId(String userEmail);
 }
