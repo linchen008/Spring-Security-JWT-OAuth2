@@ -26,6 +26,7 @@ public class JwtTokenUtils {
         final String username = getUserName(jwtToken);
         //call helper func for validating weather or not expired
         boolean isTokenExpired = isTokenExpired(jwtToken);
+        //username is same as database
         boolean isTokenUserSameAsDatabase = username.equals(userDetails.getUsername());
         return !isTokenExpired && isTokenUserSameAsDatabase;
     }
