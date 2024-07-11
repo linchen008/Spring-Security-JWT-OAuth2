@@ -19,3 +19,7 @@ spring:
 logging:
   level:
     org.springframework.security: trace
+
+jwt:
+  rsa-private-key: classpath:certs/privateKey.pem
+  rsa-public-key: classpath:certs/publicKey.pem

@@ -21,21 +21,27 @@ import java.security.Principal;
 @RequestMapping("/api")
 @RequiredArgsConstructor
 public class DashboardController {
-    @PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_ADMIN','ROLE_USER')")
+
+    //@PreAuthorize("hasAnyRole('ROLE_MANAGER','ROLE_ADMIN','ROLE_USER')")
+    @PreAuthorize("hasAuthority('SCOPE_READ')")
     @GetMapping("/welcome")
-    public ResponseEntity<String> getFirstWelcomeMessage(Authentication authentication) {
-        return ResponseEntity.ok("Welcome " + authentication.getName()+", with scope: "+authentication.getAuthorities());
+    public ResponseEntity<String> getWelcomeMessage(Authentication authentication) {
+        return ResponseEntity.ok("Welcome " +
+                authentication.getName() +
+                ", with scope: " + authentication.getAuthorities());
     }
 
-    @PreAuthorize("hasRole('ROLE_MANAGER')")
+    //@PreAuthorize("hasRole('ROLE_MANAGER')")
+    @PreAuthorize("hasAuthority('SCOPE_READ')")
     @GetMapping("/manager")
     public ResponseEntity<String> getManagerData(Principal principal) {
-        return ResponseEntity.ok("Manager:: "+principal.getName());
+        return ResponseEntity.ok("Manager:: " + principal.getName());
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    //@PreAuthorize("hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAuthority('SCOPE_WRITE')")
     @GetMapping("/admin")
     public ResponseEntity<String> getAdminData(@RequestParam("message") String message, Principal principal) {
-        return ResponseEntity.ok("Admin:: "+principal.getName() + "has this message: "+ message);
+        return ResponseEntity.ok("Admin:: " + principal.getName() + "has this message: " + message);
     }
 }
