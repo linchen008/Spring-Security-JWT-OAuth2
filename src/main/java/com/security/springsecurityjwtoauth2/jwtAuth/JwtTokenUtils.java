@@ -1,6 +1,6 @@
 package com.security.springsecurityjwtoauth2.jwtAuth;
 
-import com.security.springsecurityjwtoauth2.config.UserInfoConfig;
+import com.security.springsecurityjwtoauth2.config.user.UserInfoConfig;
 import com.security.springsecurityjwtoauth2.repo.UserInfoRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

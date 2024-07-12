@@ -1,16 +1,24 @@
 package com.security.springsecurityjwtoauth2.controller;
 
+import com.security.springsecurityjwtoauth2.dto.UserRegistrationDTO;
 import com.security.springsecurityjwtoauth2.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * @author : Tommy
@@ -23,6 +31,26 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class AuthController {
     private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationDTO userRegistrationDTO,
+                                          BindingResult bindingResult,
+                                          HttpServletResponse httpServletResponse) {
+        log.info("===AuthController: User registration=== SignUp process Started for User: {} ", userRegistrationDTO.username());
+        // Check if there are any validation errors in the user registration data
+        if (bindingResult.hasErrors()) {
+            List<String> errorMsg = bindingResult
+                    .getAllErrors()
+                    .stream()
+                    .map(DefaultMessageSourceResolvable::getDefaultMessage)
+                    .toList();
+            log.error("===AuthController: RegisterUser=== Errors in user: {} ", errorMsg);
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(errorMsg);
+        }
+        return ResponseEntity.ok(authService.register(userRegistrationDTO, httpServletResponse));
+    }
 
     /**
      * Authenticates the user and generates JWT tokens.
@@ -57,5 +85,4 @@ public class AuthController {
         return ResponseEntity
                 .ok(authService.accessWithRefreshToken(authorizationHeader));
     }
-
 }

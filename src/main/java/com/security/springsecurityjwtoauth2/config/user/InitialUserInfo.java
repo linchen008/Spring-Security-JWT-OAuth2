@@ -1,4 +1,4 @@
-package com.security.springsecurityjwtoauth2.config;
+package com.security.springsecurityjwtoauth2.config.user;
 
 import com.security.springsecurityjwtoauth2.entity.UserInfoEntity;
 import com.security.springsecurityjwtoauth2.repo.UserInfoRepo;

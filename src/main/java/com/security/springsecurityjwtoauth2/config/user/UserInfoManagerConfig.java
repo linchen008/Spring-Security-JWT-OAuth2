@@ -1,4 +1,4 @@
-package com.security.springsecurityjwtoauth2.config;
+package com.security.springsecurityjwtoauth2.config.user;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

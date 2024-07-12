@@ -18,15 +18,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthResponseDTO {
 
+    @JsonProperty("user_name")
+    private String userName;
+
+    @JsonProperty("token_type")
+    private String tokenType;
+
     @JsonProperty("access_token")
     private String accessToken;
 
     @JsonProperty("access_token_expiry")
     private int accessTokenExpiry;
-
-    @JsonProperty("token_type")
-    private String tokenType;
-
-    @JsonProperty("user_name")
-    private String userName;
 }

@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.security.springsecurityjwtoauth2.config.user.UserInfoManagerConfig;
 import com.security.springsecurityjwtoauth2.jwtAuth.JwtAccessTokenFilter;
 import com.security.springsecurityjwtoauth2.jwtAuth.JwtRefreshTokenFilter;
 import com.security.springsecurityjwtoauth2.jwtAuth.JwtTokenUtils;
@@ -203,8 +204,24 @@ public class SecurityConfig {
                 .build();
     }
 
-    // to secure the h2 console
+    /*
+     * The registerSecurityFilterChain() method configures the security filter chain for the registration endpoint.
+     * This method sets up the security configurations specifically for handling user registration requests,
+     * ensuring that users can securely create new accounts in the application.
+     */
     @Order(5)
+    @Bean
+    public SecurityFilterChain registerSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                .securityMatcher(new AntPathRequestMatcher("/register/**"))
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .build();
+    }
+
+    // to secure the h2 console
+    @Order(6)
     @Bean
     public SecurityFilterChain h2ConsoleSecurityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
